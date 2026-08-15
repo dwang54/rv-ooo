@@ -1,0 +1,102 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Tier 1: no toolchain needed. Seconds. Gates everything else.
+  lint-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: install verilator
+        run: sudo apt-get update && sudo apt-get install -y verilator
+
+      - name: lint
+        run: |
+          verilator --lint-only -Wall --timing -sv -Wno-DECLFILENAME \
+            +incdir+rtl/include \
+            rtl/include/cpu_types_pkg.vh rtl/mem/mem_model.sv \
+            rtl/fpga/bram.sv rtl/core/*.sv verif/cocotb/tb_top.sv \
+            --top-module tb_top
+
+      - name: rtl unit tests
+        run: |
+          make -s unit | tee unit.log
+          ! grep -q FAIL unit.log
+
+      - name: scoreboard unit tests
+        run: |
+          pip install pytest
+          python3 -m pytest verif/cocotb/test_cosim_unit.py -q
+
+  # Tier 2: synthesizability + area tracking. Also fast.
+  synth:
+    runs-on: ubuntu-latest
+    needs: lint-and-unit
+    steps:
+      - uses: actions/checkout@v4
+      - name: install yosys and sv2v
+        run: |
+          sudo apt-get update && sudo apt-get install -y yosys unzip
+          curl -sL -o /tmp/sv2v.zip \
+            https://github.com/zachjs/sv2v/releases/latest/download/sv2v-Linux.zip
+          unzip -o -q /tmp/sv2v.zip -d /tmp
+          sudo install /tmp/sv2v-Linux/sv2v /usr/local/bin/
+      - name: synthesis check
+        run: bash scripts/synth_check.sh
+
+  # Tier 3: full Spike co-simulation. Slow; runs only if the above pass.
+  cosim:
+    runs-on: ubuntu-latest
+    needs: [lint-and-unit, synth]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: apt packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator device-tree-compiler \
+            gcc-riscv64-unknown-elf
+          echo "RISCV_PREFIX=riscv64-unknown-elf-" >> $GITHUB_ENV
+
+      - name: python packages
+        run: pip install 'cocotb>=1.9' pytest
+
+      - name: cache spike
+        id: spike-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/riscv
+          key: spike-${{ runner.os }}-v1
+
+      - name: build spike
+        if: steps.spike-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 \
+            https://github.com/riscv-software-src/riscv-isa-sim
+          cd riscv-isa-sim && mkdir build && cd build
+          ../configure --prefix=$HOME/riscv --enable-commitlog
+          make -j$(nproc) && make install
+
+      - run: echo "$HOME/riscv/bin" >> $GITHUB_PATH
+
+      - name: build programs and golden logs
+        run: make asm
+
+      - name: regression
+        run: python3 scripts/run_regression.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-results
+          path: regression_results.json

@@ -1,0 +1,13 @@
+# ------------------------------------------------------------------------------
+# synth.ys -- Yosys pass, run on the sv2v-flattened netlist.
+#
+# Do not invoke this directly; use scripts/synth_check.sh, which runs sv2v
+# first. Yosys cannot parse this project's SystemVerilog on its own -- packages,
+# interfaces, structs and enums are all beyond its built-in frontend.
+# ------------------------------------------------------------------------------
+
+read_verilog synth/build/core_flat.v
+hierarchy -top core_top
+synth_xilinx -family xc7 -top core_top
+stat
+write_json synth/reports/yosys_netlist.json

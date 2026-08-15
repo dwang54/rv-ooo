@@ -1,0 +1,15 @@
+# Verible style rules. Enabled selectively -- the full default set fights
+# common SystemVerilog RTL idioms and produces noise that trains you to ignore
+# the linter, which defeats the point.
++line-length=length:100
++no-tabs
++no-trailing-spaces
++parameter-name-style
++module-filename
++packed-dimensions-range-ordering
++explicit-function-lifetime
++explicit-parameter-storage-type
++always-comb
++generate-label
++legacy-generate-region
+-unpacked-dimensions-range-ordering
