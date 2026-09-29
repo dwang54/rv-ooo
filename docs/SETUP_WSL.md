@@ -323,12 +323,12 @@ Everything should report `ok`. Then run the real thing:
 
 ```bash
 make unit     # RTL unit tests -- seconds
-make sw       # builds programs + Spike golden logs
+make asm      # builds programs + Spike golden logs
 make test     # full co-simulation regression
 ```
 
-`make unit` passing means Verilator and the RTL are healthy. `make sw`
-producing `.hex` and `.spike.log` files in `sw/build/` means the toolchain and
+`make unit` passing means Verilator and the RTL are healthy. `make asm`
+producing `.hex` and `.spike.log` files in `asmFiles/build/` means the toolchain and
 Spike are both working. At that point your environment is done and every
 remaining failure is a design bug — which is exactly where you want to be.
 

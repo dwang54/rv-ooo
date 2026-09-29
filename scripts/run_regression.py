@@ -30,8 +30,12 @@ ACC_RE = re.compile(
     r"PERF \S+: branches=(\d+) mispredicts=(\d+) accuracy=([\d.]+)%")
 
 
+# crt0.S is the runtime, linked into every program -- not a test itself.
+NOT_TESTS = {"crt0"}
+
+
 def discover_tests() -> list[str]:
-    return sorted(p.stem for p in SW.glob("*.S") if p.stem != "crt0")
+    return sorted(p.stem for p in SW.glob("*.S") if p.stem not in NOT_TESTS)
 
 
 def run(cmd: list[str], cwd: Path, timeout: int = 900
@@ -55,7 +59,7 @@ def main() -> int:
 
     tests = args.tests or discover_tests()
     if not tests:
-        print("no tests found in sw/tests/", file=sys.stderr)
+        print("no tests found in asmFiles/", file=sys.stderr)
         return 1
 
     print(f"building {len(tests)} programs...")

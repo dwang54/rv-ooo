@@ -3,7 +3,7 @@
 #
 #   make check      verify the toolchain
 #   make unit       SystemVerilog unit tests (seconds, Verilator only)
-#   make asm        assemble test programs + Spike golden logs
+#   make asm        assemble test programs + Spike golden logs (alias: make sw)
 #   make test       full co-simulation regression
 #   make lint       Verilator + Verible
 #   make synth      Yosys area/synthesizability check
@@ -12,7 +12,7 @@
 #   make progress   milestone checkpoint status
 # ------------------------------------------------------------------------------
 
-.PHONY: all check unit asm test regress lint fmt synth sweep waves progress clean setup
+.PHONY: all check unit asm sw test regress lint fmt synth sweep waves progress clean setup
 
 all: lint unit asm test
 
@@ -22,11 +22,20 @@ check:
 setup:
 	@bash scripts/setup.sh
 
+# -j speeds the cold build a lot: each testbench is an independent Verilator
+# compile. First run is ~1 minute; after that the objects are cached.
+NPROC := $(shell nproc 2>/dev/null || echo 4)
+
 unit:
-	@$(MAKE) -s -C testbench
+	@$(MAKE) -s -j$(NPROC) -C testbench
 
 asm:
 	@$(MAKE) -s -C asmFiles
+
+# The assembly tests used to live in sw/. Kept as an alias because the name
+# appears in older notes and muscle memory.
+sw: asm
+	@echo "  (note: this target is now called 'asm')"
 
 test: unit asm
 	@python3 scripts/run_regression.py

@@ -90,4 +90,4 @@ done
 python3 -c "import cocotb; print('  ok      cocotb', cocotb.__version__)" \
   2>/dev/null || echo "  MISSING cocotb"
 
-say "done -- try: make sw && make test"
+say "done -- try: make unit && make asm && make test"

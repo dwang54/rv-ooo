@@ -35,6 +35,16 @@ else:
     GREEN = RED = YELLOW = GREY = BOLD = OFF = ""
 
 
+# crt0.S is the runtime linked into every program, not a test in its own right.
+# asmFiles/Makefile filters it the same way; if these two ever disagree the
+# checker reports missing artifacts for a file that is never built.
+NOT_TESTS = {"crt0"}
+
+
+def discover_tests() -> list[str]:
+    return sorted(p.stem for p in SW.glob("*.S") if p.stem not in NOT_TESTS)
+
+
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -67,6 +77,13 @@ def c1_environment():
     return False, "check_env.sh did not complete"
 
 
+def c2_slow_hint() -> str | None:
+    """Warn before a cold Verilator build, which otherwise looks like a hang."""
+    if not (ROOT / "testbench" / "build").exists():
+        return "compiling simulators, first run takes a minute"
+    return None
+
+
 def c2_unit_tests():
     """RTL unit tests pass (memory model, response ordering)"""
     if not shutil.which("verilator"):
@@ -97,7 +114,7 @@ def c4_programs_build():
         tail = [l for l in out.splitlines() if "rror" in l or "not found" in l]
         return False, tail[0][:70] if tail else "build failed"
     build = SW / "build"
-    names = sorted(p.stem for p in SW.glob("*.S"))
+    names = discover_tests()
     missing = []
     for n in names:
         if not (build / f"{n}.hex").exists():
@@ -175,6 +192,12 @@ CHECKS = [
     ("Mul/div",            _make_cosim_check("05_muldiv", "Multi-cycle functional units")),
 ]
 
+# Checks that may take a noticeably long time on a cold tree announce it, so a
+# slow step reads as "working" rather than "frozen".
+HINTS = {
+    2: c2_slow_hint,
+}
+
 NEXT_ACTION = {
     0: "Work through docs/SETUP_WSL.md, then re-run.",
     1: "Verilator or the memory model is broken. Run `make unit` and read the output.",
@@ -213,12 +236,16 @@ def main() -> int:
             print(f"  {GREY}----{OFF}    {num:2}. {GREY}{name}{OFF}")
             continue
 
-        print(f"  {YELLOW}....{OFF}    {num:2}. {name}", end="\r", flush=True)
+        hint = HINTS.get(num)
+        suffix = f"  {GREY}({hint()}){OFF}" if hint and hint() else ""
+        print(f"  {YELLOW}....{OFF}    {num:2}. {name:<22}{suffix}",
+              end="", flush=True)
         try:
             ok, detail = fn()
         except Exception as e:                      # noqa: BLE001
             ok, detail = False, f"checker error: {e}"
 
+        print("\r" + " " * 96 + "\r", end="")   # clear the in-progress line
         if ok:
             done += 1
             print(f"  {GREEN}pass{OFF}    {num:2}. {name:<22} {GREY}{detail}{OFF}")

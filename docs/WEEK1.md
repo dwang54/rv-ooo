@@ -29,7 +29,7 @@ you'll waste more time than the setup costs.
 ```bash
 bash scripts/check_env.sh     # all ok
 make unit                     # 37 assertions pass
-make sw                       # 6 programs + 6 golden logs
+make asm                      # 6 programs + 6 golden logs
 ```
 
 **Done when:** `week1_check.py` shows 4/11 and stops at "Core implemented."

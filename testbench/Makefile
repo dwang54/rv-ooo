@@ -2,8 +2,13 @@
 # testbench/Makefile -- self-checking SystemVerilog unit tests.
 #
 #   make              run everything
+#   make -j$(nproc)   run everything, builds in parallel (much faster)
 #   make alu          run one
 #   make list         show available targets
+#
+# FIRST RUN IS SLOW. Each testbench is a separate Verilator compile, so a cold
+# build of all of them takes roughly a minute. Subsequent runs reuse the
+# cached objects in build/ and take a second or two. Use -j to parallelize.
 #
 # No cocotb, no RISC-V toolchain, no Spike -- only Verilator. These run in
 # seconds, which makes them the loop you actually live in. Add one testbench
@@ -17,7 +22,12 @@
 RTL    := ../rtl
 INC    := +incdir+$(RTL)/include
 PKG    := $(RTL)/include/cpu_types_pkg.vh
-VFLAGS := --binary --timing -sv -Wno-fatal -Wno-UNUSEDPARAM -Wno-DECLFILENAME $(INC)
+# -O0 on the generated C++: these testbenches run for microseconds of sim time,
+# so simulation speed is irrelevant and compile time is what you actually wait
+# for. --build-jobs parallelizes Verilator's internal C++ build.
+NPROC  := $(shell nproc 2>/dev/null || echo 4)
+VFLAGS := --binary --timing -sv -Wno-fatal -Wno-UNUSEDPARAM -Wno-DECLFILENAME \
+          -CFLAGS "-O0" --build-jobs $(NPROC) $(INC)
 
 # Every tb_*.sv present. Adding a file adds a target.
 ALL_TB := $(patsubst tb_%.sv,%,$(wildcard tb_*.sv))
@@ -62,9 +72,11 @@ $(ALL_TB): %: tb_%.sv
 	 if [ "$$missing" = "1" ]; then \
 	   echo "  skip  $*  (RTL not written yet: $(SRC_$*))"; \
 	 else \
+	   if [ ! -x build/$*/sim ]; then printf "  building %-14s ...\n" "$*"; fi; \
 	   verilator $(VFLAGS) $(PKG) $(SRC_$*) tb_$*.sv --top-module tb_$* \
 	     -o sim --Mdir build/$* > build/$*.log 2>&1 || \
-	     { echo "  BUILD FAILED: $*"; tail -20 build/$*.log; exit 1; }; \
+	     { echo "  BUILD FAILED: $*  (see testbench/build/$*.log)"; \
+	       tail -20 build/$*.log; exit 1; }; \
 	   echo "--- $* ---"; \
 	   ./build/$*/sim | grep -E "PASS|FAIL|INFO|===" || true; \
 	 fi

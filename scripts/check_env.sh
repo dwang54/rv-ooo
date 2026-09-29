@@ -157,5 +157,5 @@ if [ "$FAIL" -gt 0 ]; then
   echo "  Not ready. Install what's missing above, then re-run."
   exit 1
 fi
-echo "  Environment ready. Next: make unit && make sw && make test"
+echo "  Environment ready. Next: make unit && make asm && make test"
 exit 0

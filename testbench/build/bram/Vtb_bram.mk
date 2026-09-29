@@ -35,6 +35,7 @@ VM_PREFIX = Vtb_bram
 VM_MODPREFIX = Vtb_bram
 # User CFLAGS (from -CFLAGS on Verilator command line)
 VM_USER_CFLAGS = \
+	-O0 \
 	-DVL_TIME_CONTEXT \
 
 # User LDLIBS (from -LDFLAGS on Verilator command line)
