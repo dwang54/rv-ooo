@@ -103,11 +103,17 @@ def main() -> int:
                 entry["status"] = "FAIL"
                 print(f"FAIL  ({dt:.1f}s)")
                 # Surface only the diagnostic block, not the whole log.
-                for line in out.splitlines():
-                    if any(k in line for k in
-                           ("divergence", "mismatch", "Mismatch", "Error",
-                            "expected", "actual", "TIMEOUT", "no halt")):
-                        print(f"      {line.strip()}")
+                diag = [line.strip() for line in out.splitlines()
+                        if any(k in line for k in
+                               ("divergence", "mismatch", "Mismatch", "Error",
+                                "expected", "actual", "TIMEOUT", "no halt"))]
+                # Nothing matched means the sim never got as far as the
+                # scoreboard (tool/build failure) -- show the log tail instead.
+                if not diag:
+                    diag = [line.rstrip() for line in out.splitlines()[-15:]]
+                for line in diag:
+                    print(f"      {line}")
+                entry["error"] = "\n".join(diag)
             else:
                 npass += 1
                 entry["status"] = "PASS"

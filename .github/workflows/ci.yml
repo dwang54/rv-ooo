@@ -69,7 +69,7 @@ jobs:
           echo "RISCV_PREFIX=riscv64-unknown-elf-" >> $GITHUB_ENV
 
       - name: python packages
-        run: pip install 'cocotb>=1.9' pytest
+        run: pip install 'cocotb>=1.9,<2' pytest
 
       - name: cache spike
         id: spike-cache

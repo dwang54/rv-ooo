@@ -19,6 +19,10 @@
 // -----------------------------------------------------------------------------
 `include "cpu_types_pkg.vh"
 
+
+// interfaces 
+`include  "pc_if.vh"
+
 module core_top #(
     parameter int          ID_W    = 4,
     parameter logic [31:0] PC_INIT = 32'h8000_0000
@@ -86,6 +90,16 @@ module core_top #(
   // Build order is in docs/WEEK1.md through docs/WEEK8.md.
   // ===========================================================================
 
+  // interfaces
+  pc_if pcif();
+
+  // PC block
+  pc #(.PC_INIT(PC_INIT)) PC (.clk(clk), .n_rst(rst_n), .pc_if(pcif.pcreg));
+  assign pcif.en = 1'b1;
+  assign pcif.redirect_valid = 1'b0;
+  assign pcif.redirect_pc = 32'h0;
+  assign pcif.next_pc = pcif.pc_plus4;
+
   assign imem_req_valid      = 1'b0;
   assign imem_req_id         = '0;
   assign imem_req_addr       = PC_INIT;
@@ -112,6 +126,9 @@ module core_top #(
   assign perf_mispredicts    = '0;
   assign perf_stall_rob_full = '0;
   assign perf_stall_rs_full  = '0;
+
+
+  
 
   // Free-running cycle counter is real from day 1 -- it costs nothing and the
   // IPC scripts depend on it.

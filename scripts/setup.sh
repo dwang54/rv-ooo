@@ -33,7 +33,7 @@ fi
 # --------------------------------------------------------------- python env --
 say "python packages"
 python3 -m pip install --user --upgrade \
-  'cocotb>=1.9' cocotb-bus cocotb-coverage pytest matplotlib
+  'cocotb>=1.9,<2' cocotb-bus cocotb-coverage pytest matplotlib
 
 # ------------------------------------------------------------------- verible --
 if ! have verible-verilog-lint; then

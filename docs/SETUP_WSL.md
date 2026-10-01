@@ -208,7 +208,7 @@ pwd    # should start with /home/, not /mnt/c/
 
 ```bash
 python3 -m pip install --user --break-system-packages \
-  'cocotb>=1.9' cocotb-bus cocotb-coverage pytest matplotlib
+  'cocotb>=1.9,<2' cocotb-bus cocotb-coverage pytest matplotlib
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -219,7 +219,7 @@ equally well:
 
 ```bash
 python3 -m venv ~/.venvs/rv && source ~/.venvs/rv/bin/activate
-pip install 'cocotb>=1.9' cocotb-bus cocotb-coverage pytest matplotlib
+pip install 'cocotb>=1.9,<2' cocotb-bus cocotb-coverage pytest matplotlib
 ```
 
 If you use a venv, remember to activate it in every new shell, or add the

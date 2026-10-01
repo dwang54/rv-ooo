@@ -18,7 +18,7 @@ VERILOG_SOURCES := \
   $(RTL_ROOT)/include/cpu_types_pkg.vh \
   $(RTL_ROOT)/mem/mem_model.sv \
   $(wildcard $(RTL_ROOT)/core/*.sv) \
-  $(PWD)/tb_top.sv
+  $(CURDIR)/tb_top.sv
 
 TOPLEVEL := tb_top
 MODULE   ?= test_core
