@@ -1,78 +1,80 @@
 `include "pc_if.vh"
-`timescale 1 ns/ 1ns
 
 
-module pc_tb;
+module tb_pc;
     import cpu_types_pkg::*;
     string test_desc;
+    parameter PERIOD = 10;
 
+
+    logic CLK = 0, nRST;
+
+    always #(PERIOD/2) CLK++;
 
     pc_if pcif();
 
+    pc DUT (.clk (CLK), .n_rst(nRST), .pc_if(pcif));
 
-    test PROG (
-        .test_desc(test_desc),
-        .pcif(pcif.tb)
-    );
-
-    pc DUT (.pc_if(pcif));
-
-
-endmodule
-
-
-program test (
-    output string test_desc,
-    pc_if.tb pcif
-);
-
-import cpu_types_pkg::*;
 
     localparam COLNRM = "\x1b[0m";
     localparam COLRED = "\x1b[31m";
     localparam COLGRN = "\x1b[32m";
     localparam COLCYA = "\x1b[36m";
 
-task test_PC
-    // pass in SrcA, SrcB, OpCode
-    input word_t 
-    input aluop_t ALUOp;
-    input word_t expOUT;
-    input logic expZERO, expNEG, expOVER;
+    int fail_count = 0;
+
+task test_PC;
+    input logic enable, redirect_valid;
+    input word_t redirect_pc, next_pc;
+    input word_t expected_pc, expected_pc_plus4;
     input string test_desc;
 begin
 
     // set DUT inputs
-    aluif.SrcA = SrcA;
-    aluif.SrcB = SrcB;
-    aluif.alu_op = ALUOp;
+    pcif.en = enable;
+    pcif.redirect_valid = redirect_valid;
+    pcif.redirect_pc = redirect_pc;
+    pcif.next_pc = next_pc;
 
-    #1;                 
+    @(negedge CLK);
 
     // check outputs
-    if (aluif.Out == expOUT && aluif.ZERO == expZERO && aluif.negative == expNEG && aluif.overflow == expOVER)
+    if (pcif.pc === expected_pc && pcif.pc_plus4 === expected_pc_plus4)
         $write("%sSuccess%s for the ", COLGRN, COLNRM);
-    else 
+    else begin
         $write("%sFailure%s for the ", COLRED, COLNRM);
+        fail_count++;
+    end
     $write("%s%s test case%s\n", COLCYA, test_desc, COLNRM);
 
-    if (aluif.Out != expOUT) $write("\tExpected out of ALU: %s %h %s, got %s %h %s.\n", COLGRN, expOUT, COLNRM, COLRED, aluif.Out, COLNRM);
-    if (aluif.ZERO != expZERO) $write("\tExpected zero flag: %s %h %s, got %s %h %s\n.", COLGRN, expZERO, COLNRM, COLRED, aluif.ZERO, COLNRM);
-    if (aluif.negative != expNEG) $write("\tExpected neg flag: %s %h %s, got %s %h %s\n.", COLGRN, expNEG, COLNRM, COLRED, aluif.negative, COLNRM);
-    if (aluif.overflow != expOVER) $write("\tExpected overflow flag: %s %h %s, got %s %h %s\n.", COLGRN, expOVER, COLNRM, COLRED, aluif.overflow, COLNRM);
+    if (pcif.pc != expected_pc) $write("\tExpected pc: %s %h %s, got %s %h %s\n.", COLGRN, expected_pc, COLNRM, COLRED, pcif.pc, COLNRM);
+    if (pcif.pc_plus4 != expected_pc_plus4) $write("\tExpected pc + 4: %s %h %s, got %s %h %s\n.", COLGRN, expected_pc_plus4, COLNRM, COLRED, pcif.pc_plus4, COLNRM);
 
 end
 endtask
 
 
+task reset_DUT;
+    begin
+        nRST = 0;
+        @(posedge CLK);
+        @(posedge CLK);
+        @(posedge CLK);
+        nRST = 1;
+        @(negedge CLK);
+        @(negedge CLK);
+    end
+endtask
+
 initial begin
 
-// Testing SLLs
 
+reset_DUT();
+test_desc = "Test after reset";
+test_PC(.enable(1'b1), .redirect_valid(1'b0), .redirect_pc(32'h0), .next_pc(32'h8000_0000), .expected_pc(32'h8000_0000), .expected_pc_plus4(32'h8000_0004), .test_desc(test_desc));
+
+$display("\n=== %s: %0d failures ===\n", (fail_count != 0) ? "FAILED" : "ALL PASS", fail_count);
 $finish;
 end
-endprogram
 
-
-
-endprogram 
+endmodule
